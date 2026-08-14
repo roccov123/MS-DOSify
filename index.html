@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>dosify</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    :root {
+      --win-bg: #000000;
+      --win-fg: #ffffff;
+      --win-blue: #0000aa;
+      --win-border: 2px solid #ffffff;
+      --accent: #00ff90;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Courier New", Courier, monospace;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--win-bg);
+      color: var(--win-fg);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .window {
+      width: 760px;
+      border: var(--win-border);
+      background: var(--win-bg);
+      box-shadow: 8px 8px 0px #333333;
+      animation: bootIn 0.4s ease-out;
+    }
+
+    @keyframes bootIn {
+      from { opacity: 0; transform: translateY(-8px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .title-bar {
+      background: var(--win-fg);
+      color: var(--win-bg);
+      padding: 4px 8px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: var(--win-border);
+    }
+
+    .menu-bar {
+      border-bottom: var(--win-border);
+      padding: 4px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-retro {
+      background: var(--win-bg);
+      color: var(--win-fg);
+      border: var(--win-border);
+      padding: 4px 10px;
+      cursor: pointer;
+      font-weight: bold;
+      text-transform: uppercase;
+      transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+    }
+
+    .btn-retro:hover {
+      background: var(--win-fg);
+      color: var(--win-bg);
+    }
+
+    .btn-retro:active {
+      transform: scale(0.96);
+    }
+
+    .btn-retro:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-retro.small {
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      border-bottom: var(--win-border);
+    }
+
+    .search-bar input[type="text"] {
+      flex: 1;
+      background: var(--win-bg);
+      color: var(--win-fg);
+      border: var(--win-border);
+      padding: 4px 6px;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px dashed #fff;
+    }
+
+    .tab {
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 11px;
+      text-transform: uppercase;
+      opacity: 0.6;
+    }
+
+    .tab.active {
+      opacity: 1;
+      background: var(--win-fg);
+      color: var(--win-bg);
+    }
+
+    .content {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .panel {
+      border: var(--win-border);
+      padding: 8px;
+      height: 360px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-title {
+      border-bottom: 1px dashed #fff;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .track-list {
+      flex: 1;
+      overflow-y: auto;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .track-item {
+      padding: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      animation: fadeInRow 0.25s ease both;
+    }
+
+    @keyframes fadeInRow {
+      from { opacity: 0; transform: translateX(-4px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .track-item:hover, .track-item.active {
+      background: var(--win-fg);
+      color: var(--win-bg);
+    }
+
+    .track-item .queue-num {
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .now-playing-body {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .album-art-wrap {
+      width: 110px;
+      height: 110px;
+      border: var(--win-border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .album-art-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      animation: artFade 0.3s ease;
+    }
+
+    @keyframes artFade {
+      from { opacity: 0; filter: blur(2px); }
+      to { opacity: 1; filter: blur(0); }
+    }
+
+    .album-art-wrap.spinning img {
+      animation: spinRecord 8s linear infinite;
+      border-radius: 50%;
+    }
+
+    @keyframes spinRecord {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .status-box {
+      font-size: 11px;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    .status-box p {
+      margin: 2px 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-shrink: 0;
+    }
+
+    .progress-row {
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 8px;
+      border: 1px solid #fff;
+      cursor: pointer;
+      position: relative;
+      background: #111;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.25s linear;
+    }
+
+    .progress-times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-top: 2px;
+      opacity: 0.7;
+    }
+
+    .toggle-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .btn-toggle {
+      font-size: 10px;
+      padding: 2px 6px;
+    }
+
+    .btn-toggle.on {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    .blink {
+      animation: blink 1.1s steps(1) infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    .scanline-overlay {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.025) 0px,
+        rgba(255,255,255,0.025) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      opacity: 0.5;
+    }
+
+    .lock-screen {
+      width: 420px;
+      border: var(--win-border);
+      background: var(--win-bg);
+      box-shadow: 8px 8px 0px #333333;
+      padding: 20px;
+      text-align: center;
+      animation: bootIn 0.4s ease-out;
+    }
+
+    .lock-screen input[type="password"] {
+      background: var(--win-bg);
+      color: var(--win-fg);
+      border: var(--win-border);
+      padding: 6px;
+      width: 70%;
+      font-family: "Courier New", Courier, monospace;
+      margin: 16px 0;
+    }
+
+    .lock-error {
+      color: #ff6666;
+      font-size: 12px;
+      min-height: 16px;
+      margin-top: 8px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .account-badge {
+      font-size: 10px;
+      opacity: 0.7;
+      margin-left: auto;
+    }
+  </style>
+</head>
+<body>
+
+<div class="lock-screen" id="lockScreen">
+  <div class="title-bar" style="margin: -20px -20px 16px -20px;">
+    <span>A:\SPOTIFY.EXE - Access Control</span>
+    <span>[X]</span>
+  </div>
+
+  <div id="choiceScreen">
+    <p>Select login method:</p>
+    <button class="btn-retro" id="showGuestBtn" style="display: block; width: 100%; margin: 10px 0;">Sign In With Your Spotify Account</button>
+    <button class="btn-retro" id="showAdminBtn" style="display: block; width: 100%; margin: 10px 0;">Admin Login</button>
+  </div>
+
+  <div id="adminScreen" class="hidden">
+    <p>Enter admin password:</p>
+    <input type="password" id="passwordInput" />
+    <br />
+    <button class="btn-retro" id="unlockBtn">Enter</button>
+    <button class="btn-retro small" id="backFromAdminBtn" style="margin-top: 10px;">&lt; Back</button>
+    <div class="lock-error" id="lockError"></div>
+  </div>
+
+  <div id="guestScreen" class="hidden">
+    <p>You'll be sent to Spotify to sign in with your own account.</p>
+    <button class="btn-retro" id="guestSignInBtn">Continue to Spotify</button>
+    <br /><br />
+    <button class="btn-retro small" id="backFromGuestBtn">&lt; Back</button>
+    <div class="lock-error" id="guestError"></div>
+  </div>
+</div>
+
+<div class="window hidden" id="mainWindow">
+  <div class="title-bar">
+    <span>A:\SPOTIFY.EXE - Windows 1.0 Audio Manager</span>
+    <span>[-] [=] [X]</span>
+  </div>
+
+  <div class="menu-bar">
+    <button class="btn-retro" id="syncBtn">Sync Playlists</button>
+    <span id="syncStatus" style="font-size: 11px;">Status: Not Synced</span>
+    <span class="account-badge" id="accountBadge">Account: Owner (silent)</span>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search tracks, artists, albums..." />
+    <button class="btn-retro small" id="searchBtn">Search</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="playlists">Playlists</div>
+    <div class="tab" data-tab="search">Search Results</div>
+    <div class="tab" data-tab="queue">Queue</div>
+  </div>
+
+  <div class="content">
+    <div class="panel">
+      <div class="panel-title" id="listPanelTitle">Playlists</div>
+      <ul class="track-list" id="playlistList">
+        <li class="track-item">-- Click Sync Playlists to Load --</li>
+      </ul>
+      <ul class="track-list hidden" id="searchList"></ul>
+      <ul class="track-list hidden" id="queueList"></ul>
+    </div>
+
+    <div class="panel" style="position: relative;">
+      <div class="scanline-overlay"></div>
+      <div class="panel-title">Now Playing</div>
+      <div class="now-playing-body">
+        <div class="album-art-wrap" id="albumArtWrap">
+          <span style="font-size: 9px; opacity: 0.5;">NO ART</span>
+        </div>
+        <div class="status-box">
+          <p><strong>Track:</strong> <span id="nowTrack">None</span></p>
+          <p><strong>Artist:</strong> <span id="nowArtist">None</span></p>
+          <p><strong>Album:</strong> <span id="nowAlbum">None</span></p>
+          <p><strong>Device:</strong> <span id="deviceName">Initializing<span class="blink">_</span></span></p>
+        </div>
+      </div>
+
+      <div class="progress-row">
+        <div class="progress-bar-track" id="progressTrack">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-times">
+          <span id="timeElapsed">0:00</span>
+          <span id="timeTotal">0:00</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn-retro" id="prevBtn" disabled>&lt;&lt;</button>
+        <button class="btn-retro" id="playBtn" disabled>PLAY/PAUSE</button>
+        <button class="btn-retro" id="nextBtn" disabled>&gt;&gt;</button>
+      </div>
+
+      <div class="toggle-row">
+        <button class="btn-retro btn-toggle" id="shuffleBtn">Shuffle</button>
+        <button class="btn-retro btn-toggle" id="repeatBtn">Repeat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+<script>
+  // ---- FILL THIS IN: your app's public Client ID (safe to expose, not secret) ----
+  const PUBLIC_CLIENT_ID = "04a8390c677d46a19e65b18b93ac80ae";
+  // ------------------------------------------------------------------------------
+
+  let accessToken = null;        // owner token, from the silent refresh-token flow
+  let guestAccessToken = null;   // a guest's own token, if they sign in themselves
+  let player = null;
+  let deviceId = null;
+  let tokenExpiresAt = 0;
+  let sessionPassword = null;
+  let shuffleOn = false;
+  let repeatMode = 'off'; // off -> context -> track -> off
+  let progressPollTimer = null;
+  let currentPlaylists = [];
+
+  const syncBtn = document.getElementById('syncBtn');
+  const playlistList = document.getElementById('playlistList');
+  const searchList = document.getElementById('searchList');
+  const queueList = document.getElementById('queueList');
+  const syncStatus = document.getElementById('syncStatus');
+  const lockScreen = document.getElementById('lockScreen');
+  const mainWindow = document.getElementById('mainWindow');
+  const passwordInput = document.getElementById('passwordInput');
+  const unlockBtn = document.getElementById('unlockBtn');
+  const lockError = document.getElementById('lockError');
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const accountBadge = document.getElementById('accountBadge');
+  const guestSignInBtn = document.getElementById('guestSignInBtn');
+  const choiceScreen = document.getElementById('choiceScreen');
+  const adminScreen = document.getElementById('adminScreen');
+  const guestScreen = document.getElementById('guestScreen');
+  const showGuestBtn = document.getElementById('showGuestBtn');
+  const showAdminBtn = document.getElementById('showAdminBtn');
+  const backFromAdminBtn = document.getElementById('backFromAdminBtn');
+  const backFromGuestBtn = document.getElementById('backFromGuestBtn');
+  const albumArtWrap = document.getElementById('albumArtWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressTrack = document.getElementById('progressTrack');
+  const timeElapsed = document.getElementById('timeElapsed');
+  const timeTotal = document.getElementById('timeTotal');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const repeatBtn = document.getElementById('repeatBtn');
+  const listPanelTitle = document.getElementById('listPanelTitle');
+
+  // ---------- Lock screen navigation ----------
+  function showPanel(panel) {
+    choiceScreen.classList.add('hidden');
+    adminScreen.classList.add('hidden');
+    guestScreen.classList.add('hidden');
+    panel.classList.remove('hidden');
+  }
+  showAdminBtn.addEventListener('click', () => {
+    showPanel(adminScreen);
+    passwordInput.focus();
+  });
+  showGuestBtn.addEventListener('click', () => showPanel(guestScreen));
+  backFromAdminBtn.addEventListener('click', () => showPanel(choiceScreen));
+  backFromGuestBtn.addEventListener('click', () => showPanel(choiceScreen));
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      playlistList.classList.add('hidden');
+      searchList.classList.add('hidden');
+      queueList.classList.add('hidden');
+
+      if (tab.dataset.tab === 'playlists') {
+        playlistList.classList.remove('hidden');
+        listPanelTitle.innerText = 'Playlists';
+      } else if (tab.dataset.tab === 'search') {
+        searchList.classList.remove('hidden');
+        listPanelTitle.innerText = 'Search Results';
+      } else {
+        queueList.classList.remove('hidden');
+        listPanelTitle.innerText = 'Up Next';
+        refreshQueue();
+      }
+    });
+  });
+
+  // ---------- Password gate (owner's silent flow) ----------
+  async function attemptUnlock() {
+    const attempt = passwordInput.value;
+    lockError.innerText = "Checking...";
+    unlockBtn.disabled = true;
+    sessionPassword = attempt;
+
+    try {
+      const res = await fetch('/api/refresh-token', {
+        headers: { 'x-app-password': sessionPassword }
+      });
+      const data = await res.json();
+
+      if (res.status === 401) {
+        lockError.innerText = "Incorrect password.";
+        sessionPassword = null;
+        passwordInput.value = "";
+        passwordInput.focus();
+        return;
+      }
+      if (data.error) {
+        lockError.innerText = "Error: " + data.error;
+        return;
+      }
+
+      accessToken = data.access_token;
+      tokenExpiresAt = Date.now() + data.expires_in * 1000;
+      lockScreen.classList.add('hidden');
+      mainWindow.classList.remove('hidden');
+      initPlayer();
+    } catch (err) {
+      lockError.innerText = "Connection error, try again.";
+    } finally {
+      unlockBtn.disabled = false;
+    }
+  }
+
+  unlockBtn.addEventListener('click', attemptUnlock);
+  passwordInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') attemptUnlock();
+  });
+
+  // ---------- Guest sign-in (their own account, their own click, their own login) ----------
+  // This is entirely separate from the owner's silent flow above. Nobody is
+  // redirected anywhere unless THEY personally click this button.
+  function generateRandomString(length) {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < length; i++) text += possible.charAt(Math.floor(Math.random() * possible.length));
+    return text;
+  }
+
+  async function generateCodeChallenge(verifier) {
+    const data = new TextEncoder().encode(verifier);
+    const digest = await window.crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  guestSignInBtn.addEventListener('click', async () => {
+    if (PUBLIC_CLIENT_ID === "YOUR_CLIENT_ID_HERE") {
+      document.getElementById('guestError').innerText = "App owner needs to configure guest sign-in first.";
+      return;
+    }
+    const verifier = generateRandomString(128);
+    const challenge = await generateCodeChallenge(verifier);
+    sessionStorage.setItem('guest_code_verifier', verifier);
+
+    const redirectUri = window.location.origin + window.location.pathname;
+    const scopes = [
+      'user-library-read', 'playlist-read-private', 'playlist-read-collaborative',
+      'streaming', 'user-read-playback-state', 'user-modify-playback-state'
+    ].join(' ');
+
+    const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${PUBLIC_CLIENT_ID}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge_method=S256&code_challenge=${challenge}`;
+    window.location.href = url;
+  });
+
+  async function handleGuestCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const verifier = sessionStorage.getItem('guest_code_verifier');
+    if (!code || !verifier) return;
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    const redirectUri = window.location.origin + window.location.pathname;
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: PUBLIC_CLIENT_ID,
+        grant_type: 'authorization_code',
+        code, redirect_uri: redirectUri, code_verifier: verifier,
+      }),
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      guestAccessToken = data.access_token;
+      accountBadge.innerText = "Account: Guest (signed in)";
+      if (!lockScreen.classList.contains('hidden')) {
+        // If a guest signs in before the owner password, let them straight in.
+        lockScreen.classList.add('hidden');
+        mainWindow.classList.remove('hidden');
+      }
+      if (!player) initPlayer();
+    }
+  }
+
+  // ---------- Unified token getter: guest token wins if present ----------
+  async function getAccessToken() {
+    if (guestAccessToken) return guestAccessToken;
+
+    if (accessToken && Date.now() < tokenExpiresAt - 30000) return accessToken;
+
+    const res = await fetch('/api/refresh-token', {
+      headers: { 'x-app-password': sessionPassword }
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    accessToken = data.access_token;
+    tokenExpiresAt = Date.now() + data.expires_in * 1000;
+    if (!player) initPlayer();
+    return accessToken;
+  }
+
+  // ---------- Playlists ----------
+  async function fetchAllPlaylists(token) {
+    let playlists = [];
+    let url = 'https://api.spotify.com/v1/me/playlists?limit=50';
+    while (url) {
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) throw new Error(`Spotify API error: ${res.status}`);
+      const data = await res.json();
+      playlists = playlists.concat(data.items);
+      url = data.next;
+    }
+    return playlists;
+  }
+
+  async function fetchLibrary() {
+    syncStatus.innerText = "Status: Syncing...";
+    syncBtn.disabled = true;
+    try {
+      const token = await getAccessToken();
+      const playlists = await fetchAllPlaylists(token);
+      currentPlaylists = playlists.filter(p => p);
+
+      playlistList.innerHTML = '';
+      currentPlaylists.forEach((playlist, i) => {
+        const li = document.createElement('li');
+        li.className = 'track-item';
+        li.style.animationDelay = `${Math.min(i, 20) * 0.02}s`;
+        const trackCount = playlist.tracks?.total ?? playlist.items?.total ?? '?';
+        li.innerText = `> ${playlist.name} (${trackCount} tracks)`;
+        li.onclick = () => playPlaylist(playlist.uri, li);
+        playlistList.appendChild(li);
+      });
+
+      syncStatus.innerText = `Status: Synced (${currentPlaylists.length} Playlists)`;
+    } catch (err) {
+      syncStatus.innerText = "Status: Sync Failed";
+      console.error(err);
+    } finally {
+      syncBtn.disabled = false;
+    }
+  }
+  syncBtn.addEventListener('click', fetchLibrary);
+
+  // ---------- Search ----------
+  async function runSearch() {
+    const q = searchInput.value.trim();
+    if (!q) return;
+
+    document.querySelector('.tab[data-tab="search"]').click();
+    searchList.innerHTML = '<li class="track-item">Searching...</li>';
+
+    try {
+      const token = await getAccessToken();
+      // Spotify's Feb 2026 API changes capped the search "limit" param at 10
+      // (it used to allow up to 50) — anything higher now gets rejected.
+      const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=10`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+      const data = await res.json();
+
+      searchList.innerHTML = '';
+      (data.tracks?.items || []).forEach((track, i) => {
+        const li = document.createElement('li');
+        li.className = 'track-item';
+        li.style.animationDelay = `${Math.min(i, 20) * 0.02}s`;
+        li.innerText = `> ${track.name} - ${track.artists.map(a => a.name).join(', ')}`;
+        li.onclick = () => playTrackUri(track.uri, li);
+        searchList.appendChild(li);
+      });
+
+      if (!data.tracks?.items?.length) {
+        searchList.innerHTML = '<li class="track-item">No results.</li>';
+      }
+    } catch (err) {
+      searchList.innerHTML = '<li class="track-item">Search failed.</li>';
+      console.error(err);
+    }
+  }
+  searchBtn.addEventListener('click', runSearch);
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+
+  // ---------- Queue ----------
+  async function refreshQueue() {
+    if (!deviceId) {
+      queueList.innerHTML = '<li class="track-item">Player not ready yet.</li>';
+      return;
+    }
+    try {
+      const token = await getAccessToken();
+      const res = await fetch('https://api.spotify.com/v1/me/player/queue', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`Queue fetch failed: ${res.status}`);
+      const data = await res.json();
+
+      queueList.innerHTML = '';
+      (data.queue || []).slice(0, 30).forEach((track, i) => {
+        const li = document.createElement('li');
+        li.className = 'track-item';
+        li.style.animationDelay = `${Math.min(i, 20) * 0.02}s`;
+        li.innerHTML = `<span class="queue-num">${i + 1}.</span><span>${track.name} - ${track.artists.map(a => a.name).join(', ')}</span>`;
+        queueList.appendChild(li);
+      });
+      if (!data.queue?.length) {
+        queueList.innerHTML = '<li class="track-item">Queue is empty.</li>';
+      }
+    } catch (err) {
+      queueList.innerHTML = '<li class="track-item">Could not load queue.</li>';
+      console.error(err);
+    }
+  }
+
+  // ---------- Player ----------
+  window.onSpotifyWebPlaybackSDKReady = () => {
+    handleGuestCallback();
+  };
+
+  function initPlayer() {
+    if (player) return;
+    player = new Spotify.Player({
+      name: 'Windows 1.0 Retro Player',
+      getOAuthToken: async cb => cb(await getAccessToken()),
+      volume: 0.8
+    });
+
+    player.addListener('ready', ({ device_id }) => {
+      deviceId = device_id;
+      document.getElementById('deviceName').innerText = 'Win 1.0 Virtual Soundcard';
+      document.getElementById('playBtn').disabled = false;
+      document.getElementById('prevBtn').disabled = false;
+      document.getElementById('nextBtn').disabled = false;
+      startProgressPolling();
+    });
+
+    player.addListener('player_state_changed', state => {
+      if (!state) return;
+      const track = state.track_window.current_track;
+      document.getElementById('nowTrack').innerText = track.name;
+      document.getElementById('nowArtist').innerText = track.artists[0].name;
+      document.getElementById('nowAlbum').innerText = track.album.name;
+
+      const artUrl = track.album.images?.[0]?.url;
+      if (artUrl) {
+        albumArtWrap.classList.toggle('spinning', !state.paused);
+        albumArtWrap.innerHTML = `<img src="${artUrl}" alt="Album art" />`;
+      }
+
+      shuffleOn = state.shuffle;
+      shuffleBtn.classList.toggle('on', shuffleOn);
+      repeatMode = state.repeat_mode === 0 ? 'off' : state.repeat_mode === 1 ? 'context' : 'track';
+      repeatBtn.classList.toggle('on', repeatMode !== 'off');
+      repeatBtn.innerText = repeatMode === 'track' ? 'Repeat: 1' : repeatMode === 'context' ? 'Repeat: All' : 'Repeat';
+
+      timeTotal.innerText = formatTime(state.duration);
+      updateProgressBar(state.position, state.duration);
+    });
+
+    player.connect();
+
+    document.getElementById('playBtn').onclick = () => player.togglePlay();
+    document.getElementById('nextBtn').onclick = () => player.nextTrack();
+    document.getElementById('prevBtn').onclick = () => player.previousTrack();
+  }
+
+  function formatTime(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  function updateProgressBar(position, duration) {
+    if (!duration) return;
+    const pct = Math.min(100, (position / duration) * 100);
+    progressFill.style.width = pct + '%';
+    timeElapsed.innerText = formatTime(position);
+  }
+
+  function startProgressPolling() {
+    if (progressPollTimer) clearInterval(progressPollTimer);
+    progressPollTimer = setInterval(async () => {
+      if (!player) return;
+      const state = await player.getCurrentState();
+      if (state) updateProgressBar(state.position, state.duration);
+    }, 1000);
+  }
+
+  progressTrack.addEventListener('click', async (e) => {
+    if (!player) return;
+    const state = await player.getCurrentState();
+    if (!state) return;
+    const rect = progressTrack.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    await player.seek(Math.floor(pct * state.duration));
+  });
+
+  shuffleBtn.addEventListener('click', async () => {
+    const token = await getAccessToken();
+    shuffleOn = !shuffleOn;
+    await fetch(`https://api.spotify.com/v1/me/player/shuffle?state=${shuffleOn}&device_id=${deviceId}`, {
+      method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }
+    });
+    shuffleBtn.classList.toggle('on', shuffleOn);
+  });
+
+  repeatBtn.addEventListener('click', async () => {
+    const token = await getAccessToken();
+    const next = repeatMode === 'off' ? 'context' : repeatMode === 'context' ? 'track' : 'off';
+    repeatMode = next;
+    await fetch(`https://api.spotify.com/v1/me/player/repeat?state=${next}&device_id=${deviceId}`, {
+      method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }
+    });
+    repeatBtn.classList.toggle('on', repeatMode !== 'off');
+    repeatBtn.innerText = repeatMode === 'track' ? 'Repeat: 1' : repeatMode === 'context' ? 'Repeat: All' : 'Repeat';
+  });
+
+  // ---------- Playback actions ----------
+  async function playPlaylist(contextUri, clickedEl) {
+    if (!deviceId) return;
+    document.querySelectorAll('.track-item.active').forEach(el => el.classList.remove('active'));
+    if (clickedEl) clickedEl.classList.add('active');
+
+    const token = await getAccessToken();
+    const res = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ context_uri: contextUri }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 204) console.error('Playback failed:', res.status, await res.text());
+  }
+
+  async function playTrackUri(uri, clickedEl) {
+    if (!deviceId) return;
+    document.querySelectorAll('.track-item.active').forEach(el => el.classList.remove('active'));
+    if (clickedEl) clickedEl.classList.add('active');
+
+    const token = await getAccessToken();
+    const res = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ uris: [uri] }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 204) console.error('Playback failed:', res.status, await res.text());
+  }
+
+  // In case the page loads directly on a guest OAuth redirect before the SDK fires.
+  if (window.location.search.includes('code=')) {
+    // handleGuestCallback also runs from onSpotifyWebPlaybackSDKReady;
+    // this covers the (rare) case the SDK script is slow to load.
+    setTimeout(() => { if (!guestAccessToken) handleGuestCallback(); }, 1500);
+  }
+</script>
+</body>
+</html>
