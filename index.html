@@ -244,11 +244,13 @@
 
       trackList.innerHTML = '';
       playlists
-        .filter(playlist => playlist && playlist.tracks) // skip null/malformed entries Spotify sometimes returns
+        .filter(playlist => playlist) // skip null entries Spotify sometimes returns
         .forEach(playlist => {
           const li = document.createElement('li');
           li.className = 'track-item';
-          const trackCount = playlist.tracks.total ?? '?';
+          // Spotify has used both "tracks" and "items" for this field across
+          // API versions — check both so we don't break if it changes again.
+          const trackCount = playlist.tracks?.total ?? playlist.items?.total ?? '?';
           li.innerText = `> ${playlist.name} (${trackCount} tracks)`;
           li.onclick = () => playPlaylist(playlist.uri, li);
           trackList.appendChild(li);
