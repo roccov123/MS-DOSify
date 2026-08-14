@@ -143,15 +143,15 @@
   </div>
 
   <div class="menu-bar">
-    <button class="btn-retro" id="syncBtn">Sync Library</button>
+    <button class="btn-retro" id="syncBtn">Sync Playlists</button>
     <span id="syncStatus" style="font-size: 11px;">Status: Not Synced</span>
   </div>
 
   <div class="content">
     <div class="panel">
-      <div class="panel-title">Saved Tracks</div>
+      <div class="panel-title">Playlists</div>
       <ul class="track-list" id="trackList">
-        <li class="track-item">-- Click Sync Library to Load --</li>
+        <li class="track-item">-- Click Sync Playlists to Load --</li>
       </ul>
     </div>
 
@@ -211,14 +211,14 @@
     return accessToken;
   }
 
-  async function fetchLibrary() {
-    syncStatus.innerText = "Status: Syncing...";
-    syncBtn.disabled = true;
+  // Pulls ALL playlists, following pagination (a user can have more than
+  // the 50-per-request max, so we keep requesting "next" until it's null).
+  async function fetchAllPlaylists(token) {
+    let playlists = [];
+    let url = 'https://api.spotify.com/v1/me/playlists?limit=50';
 
-    try {
-      const token = await getAccessToken();
-
-      const res = await fetch('https://api.spotify.com/v1/me/tracks?limit=50', {
+    while (url) {
+      const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -227,17 +227,31 @@
       }
 
       const data = await res.json();
+      playlists = playlists.concat(data.items);
+      url = data.next; // Spotify gives us the next page URL directly, or null when done.
+    }
+
+    return playlists;
+  }
+
+  async function fetchLibrary() {
+    syncStatus.innerText = "Status: Syncing...";
+    syncBtn.disabled = true;
+
+    try {
+      const token = await getAccessToken();
+      const playlists = await fetchAllPlaylists(token);
 
       trackList.innerHTML = '';
-      data.items.forEach(item => {
+      playlists.forEach(playlist => {
         const li = document.createElement('li');
         li.className = 'track-item';
-        li.innerText = `> ${item.track.name} - ${item.track.artists[0].name}`;
-        li.onclick = () => playTrack(item.track.uri);
+        li.innerText = `> ${playlist.name} (${playlist.tracks.total} tracks)`;
+        li.onclick = () => playPlaylist(playlist.uri, li);
         trackList.appendChild(li);
       });
 
-      syncStatus.innerText = `Status: Synced (${data.items.length} Tracks)`;
+      syncStatus.innerText = `Status: Synced (${playlists.length} Playlists)`;
     } catch (err) {
       syncStatus.innerText = "Status: Sync Failed";
       console.error(err);
@@ -285,17 +299,28 @@
     document.getElementById('prevBtn').onclick = () => player.previousTrack();
   }
 
-  async function playTrack(uri) {
+  // Plays an entire playlist as a queue, starting from track 1.
+  // Spotify distinguishes "context_uri" (a playlist/album to play through)
+  // from "uris" (a specific list of individual tracks) — we want the former.
+  async function playPlaylist(contextUri, clickedEl) {
     if (!deviceId) return;
+
+    document.querySelectorAll('.track-item.active').forEach(el => el.classList.remove('active'));
+    if (clickedEl) clickedEl.classList.add('active');
+
     const token = await getAccessToken();
-    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+    const res = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
       method: 'PUT',
-      body: JSON.stringify({ uris: [uri] }),
+      body: JSON.stringify({ context_uri: contextUri }),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
     });
+
+    if (!res.ok && res.status !== 204) {
+      console.error('Playback failed:', res.status, await res.text());
+    }
   }
 </script>
 </body>
