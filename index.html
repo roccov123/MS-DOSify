@@ -243,13 +243,16 @@
       const playlists = await fetchAllPlaylists(token);
 
       trackList.innerHTML = '';
-      playlists.forEach(playlist => {
-        const li = document.createElement('li');
-        li.className = 'track-item';
-        li.innerText = `> ${playlist.name} (${playlist.tracks.total} tracks)`;
-        li.onclick = () => playPlaylist(playlist.uri, li);
-        trackList.appendChild(li);
-      });
+      playlists
+        .filter(playlist => playlist && playlist.tracks) // skip null/malformed entries Spotify sometimes returns
+        .forEach(playlist => {
+          const li = document.createElement('li');
+          li.className = 'track-item';
+          const trackCount = playlist.tracks.total ?? '?';
+          li.innerText = `> ${playlist.name} (${trackCount} tracks)`;
+          li.onclick = () => playPlaylist(playlist.uri, li);
+          trackList.appendChild(li);
+        });
 
       syncStatus.innerText = `Status: Synced (${playlists.length} Playlists)`;
     } catch (err) {
